@@ -144,7 +144,7 @@ func initDepositCmd() *cobra.Command {
 
 			client := cliclients.WaspClientWithVersionCheck(ctx, node)
 
-			util.TryManageCoinsAmount(ctx)
+			util.TryMergeAllCoins(ctx)
 			var res *iotajsonrpc.IotaTransactionBlockResponse
 			var err error
 			if strings.Contains(args[0], "|") {
@@ -159,6 +159,7 @@ func initDepositCmd() *cobra.Command {
 						chainclient.PostRequestParams{
 							Transfer:    tokens,
 							Allowance:   allowance,
+							UseGasCoin:  true,
 							GasBudget:   iotaclient.DefaultGasBudget,
 							L2GasBudget: isc.Million,
 						},
@@ -178,6 +179,7 @@ func initDepositCmd() *cobra.Command {
 						chainclient.PostRequestParams{
 							Transfer:    tokens,
 							Allowance:   allowance,
+							UseGasCoin:  true,
 							GasBudget:   iotaclient.DefaultGasBudget,
 							L2GasBudget: isc.Million,
 						},

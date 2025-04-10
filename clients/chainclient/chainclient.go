@@ -50,6 +50,7 @@ type PostRequestParams struct {
 	Transfer    *isc.Assets
 	Nonce       uint64
 	Allowance   *isc.Assets
+	UseGasCoin  bool
 	GasBudget   uint64
 	GasPrice    uint64
 	L2GasBudget uint64
@@ -146,6 +147,7 @@ func (c *Client) postSingleRequest(
 			Assets:           transferAssets,
 			Message:          msg,
 			AllowanceBCS:     allowanceBCS,
+			UseGasCoin:       params.UseGasCoin,
 			OnchainGasBudget: params.GetL2GasBudget(),
 			GasPrice:         params.GetGasPrice(),
 			GasBudget:        params.GetGasBudget(),

@@ -71,6 +71,7 @@ type CreateAndSendRequestWithAssetsRequest struct {
 	// AllowanceBCS is either empty or a BCS-encoded iscmove.Allowance
 	AllowanceBCS     []byte
 	OnchainGasBudget uint64
+	UseGasCoin       bool                // Set it to true if the address has only one basetoken and which is used as GasCoin
 	GasPayments      []*iotago.ObjectRef // optional
 	GasPrice         uint64
 	GasBudget        uint64
@@ -153,6 +154,21 @@ func (c *Client) CreateAndSendRequestWithAssets(
 
 	// Then the rest of the coins
 	for _, tuple := range placedCoins {
+		if tuple.A.IsIOTA() && req.UseGasCoin {
+			argSplitCoins := ptb.Command(iotago.Command{SplitCoins: &iotago.ProgrammableSplitCoins{
+				Coin:    iotago.GetArgumentGasCoin(),
+				Amounts: []iotago.Argument{ptb.MustForceSeparatePure(tuple.B)},
+			}})
+			ptb = PTBAssetsBagPlaceCoinWithAmount(
+				ptb,
+				req.PackageID,
+				argAssetsBag,
+				argSplitCoins,
+				iotajsonrpc.CoinValue(tuple.B),
+				tuple.A.CoinType,
+			)
+			continue
+		}
 		ptb = PTBAssetsBagPlaceCoinWithAmount(
 			ptb,
 			req.PackageID,
