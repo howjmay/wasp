@@ -11,8 +11,9 @@ type VersionResponse struct {
 }
 
 type InfoResponse struct {
-	Version    string               `json:"version" swagger:"desc(The version of the node),required"`
-	PublicKey  string               `json:"publicKey" swagger:"desc(The public key of the node (Hex)),required"`
-	PeeringURL string               `json:"peeringURL" swagger:"desc(The net id of the node),required"`
-	L1Params   *parameters.L1Params `json:"l1Params" swagger:"desc(The L1 parameters),required"`
+	Version    string `json:"version" swagger:"desc(The version of the node),required"`
+	PublicKey  string `json:"publicKey" swagger:"desc(The public key of the node (Hex)),required"`
+	PeeringURL string `json:"peeringURL" swagger:"desc(The net id of the node),required"`
+	// FIXME we should define a new type in package webapi to adpot to to openapi client
+	L1Params *parameters.L1Params `json:"l1Params" swagger:"desc(The L1 parameters),required"`
 }
