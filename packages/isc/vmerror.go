@@ -90,7 +90,7 @@ func (e *VMErrorTemplate) Create(params ...VMErrorParam) *VMError {
 // VMErrorTemplate by mistake, so that we don't crash the VM because of that.
 func (e *VMErrorTemplate) Error() string {
 	// calling Sprintf so that it marks missing parameters as errors
-	return fmt.Sprintf(e.messageFormat)
+	return fmt.Sprintf("%s", e.messageFormat)
 }
 
 func (e *VMErrorTemplate) MessageFormat() string {
