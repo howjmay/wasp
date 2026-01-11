@@ -31,7 +31,7 @@ import (
 	"github.com/iotaledger/wasp/v2/clients/chainclient"
 	"github.com/iotaledger/wasp/v2/clients/iota-go/iotaclient"
 	"github.com/iotaledger/wasp/v2/clients/iota-go/iotago"
-	"github.com/iotaledger/wasp/v2/clients/iota-go/iotajsonrpc"
+	"github.com/iotaledger/wasp/v2/clients/iotagraphql"
 	testcommon "github.com/iotaledger/wasp/v2/clients/iota-go/test_common"
 	"github.com/iotaledger/wasp/v2/clients/multiclient"
 	"github.com/iotaledger/wasp/v2/packages/apilib"
@@ -40,7 +40,7 @@ import (
 	"github.com/iotaledger/wasp/v2/packages/evm/evmlogger"
 	"github.com/iotaledger/wasp/v2/packages/isc"
 	"github.com/iotaledger/wasp/v2/packages/origin"
-	"github.com/iotaledger/wasp/v2/packages/parameters"
+	"github.com/iotaledger/wasp/v2/packages/parameters/l1paramsfetcher"
 	"github.com/iotaledger/wasp/v2/packages/testutil/testkey"
 	"github.com/iotaledger/wasp/v2/packages/testutil/testlogger"
 	"github.com/iotaledger/wasp/v2/packages/transaction"
@@ -57,7 +57,7 @@ type Cluster struct {
 	DataPath          string
 	OriginatorKeyPair *cryptolib.KeyPair
 	l1                clients.L1Client
-	l1ParamsFetcher   parameters.L1ParamsFetcher
+	l1ParamsFetcher   l1paramsfetcher.L1ParamsFetcher
 	waspCmds          []*waspCmd
 	t                 *testing.T
 	log               log.Logger
@@ -105,7 +105,7 @@ func New(name string, config *ClusterConfig, dataPath string, t *testing.T, log 
 		t:                 t,
 		log:               log,
 		l1:                client,
-		l1ParamsFetcher:   parameters.NewL1ParamsFetcher(client.IotaClient(), log),
+		l1ParamsFetcher:   l1paramsfetcher.NewL1ParamsFetcher(client.GetIotaClient(), log),
 		DataPath:          dataPath,
 	}
 }
@@ -309,13 +309,13 @@ func (clu *Cluster) DeployChain(allPeers, committeeNodes []int, quorum uint16, s
 
 	getCoinsRes, err := l1Client.GetCoins(
 		context.Background(),
-		iotaclient.GetCoinsRequest{Owner: address.AsIotaAddress()},
+		iotagraphql.GetCoinsRequest{Owner: address.AsIotaAddress()},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cant get gas coin: %w", err)
 	}
 
-	var gascoin *iotajsonrpc.Coin
+	var gascoin *iotagraphql.Coin
 	for _, coin := range getCoinsRes.Data {
 		// dont pick a too big coin object
 		if coin.Balance.Uint64() < 3*iotaclient.FundsFromFaucetAmount &&
@@ -338,7 +338,7 @@ func (clu *Cluster) DeployChain(allPeers, committeeNodes []int, quorum uint16, s
 		nil,
 		iotaclient.DefaultGasBudget,
 		iotaclient.DefaultGasPrice,
-		&iotajsonrpc.IotaTransactionBlockResponseOptions{
+		&iotagraphql.IotaTransactionBlockResponseOptions{
 			ShowInput:   true,
 			ShowEffects: true,
 		},
@@ -432,7 +432,7 @@ func (clu *Cluster) DeployChain(allPeers, committeeNodes []int, quorum uint16, s
 func (clu *Cluster) addAllAccessNodes(chain *Chain, accessNodes []int) error {
 	//
 	// Register all nodes as access nodes.
-	addAccessNodesTxs := make([]*iotajsonrpc.IotaTransactionBlockResponse, len(accessNodes))
+	addAccessNodesTxs := make([]*iotagraphql.IotaTransactionBlockResponse, len(accessNodes))
 	for i, a := range accessNodes {
 		tx, err := clu.addAccessNode(a, chain)
 		if err != nil {
@@ -491,7 +491,7 @@ func (clu *Cluster) addAllAccessNodes(chain *Chain, accessNodes []int) error {
 // addAccessNode introduces node at accessNodeIndex as an access node to the chain.
 // This is done by activating the chain on the node and asking the governance contract
 // to consider it as an access node.
-func (clu *Cluster) addAccessNode(accessNodeIndex int, chain *Chain) (*iotajsonrpc.IotaTransactionBlockResponse, error) {
+func (clu *Cluster) addAccessNode(accessNodeIndex int, chain *Chain) (*iotagraphql.IotaTransactionBlockResponse, error) {
 	waspClient := clu.WaspClient(accessNodeIndex)
 	if err := apilib.ActivateChainOnNodes(clu.WaspClientFromHostName, clu.Config.APIHosts([]int{accessNodeIndex}), chain.ChainID); err != nil {
 		return nil, err
