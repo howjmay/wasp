@@ -1,4 +1,4 @@
-package main
+package clientgen
 
 import (
 	"math/big"
