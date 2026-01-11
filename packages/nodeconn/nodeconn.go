@@ -15,8 +15,8 @@ import (
 	"github.com/iotaledger/hive.go/ds/shrinkingmap"
 	"github.com/iotaledger/hive.go/log"
 	"github.com/iotaledger/wasp/v2/clients"
-	"github.com/iotaledger/wasp/v2/clients/iota-go/iotaclient"
-	"github.com/iotaledger/wasp/v2/clients/iota-go/iotajsonrpc"
+	"github.com/iotaledger/wasp/v2/clients/iota-go/client"
+	"github.com/iotaledger/wasp/v2/clients/iotagraphql"
 	"github.com/iotaledger/wasp/v2/clients/iota-go/iotasigner"
 	"github.com/iotaledger/wasp/v2/clients/iscmove/iscmoveclient"
 	"github.com/iotaledger/wasp/v2/packages/chain"
@@ -24,6 +24,7 @@ import (
 	"github.com/iotaledger/wasp/v2/packages/coin"
 	"github.com/iotaledger/wasp/v2/packages/isc"
 	"github.com/iotaledger/wasp/v2/packages/parameters"
+	"github.com/iotaledger/wasp/v2/packages/parameters/l1paramsfetcher"
 	"github.com/iotaledger/wasp/v2/packages/transaction"
 	"github.com/iotaledger/wasp/v2/packages/util"
 )
@@ -55,7 +56,7 @@ type nodeConnection struct {
 	log.Logger
 
 	httpClient          clients.L1Client
-	l1ParamsFetcher     parameters.L1ParamsFetcher
+	l1ParamsFetcher     l1paramsfetcher.L1ParamsFetcher
 	wsURL               string
 	httpURL             string
 	maxNumberOfRequests int
@@ -78,14 +79,14 @@ func New(
 	httpClient := clients.NewL1Client(clients.L1Config{
 		APIURL:    httpURL,
 		FaucetURL: "",
-	}, iotaclient.WaitForEffectsEnabled)
+	}, iotagraphql.WaitForEffectsEnabled)
 
 	return &nodeConnection{
 		Logger:              log,
 		wsURL:               wsURL,
 		httpURL:             httpURL,
 		httpClient:          httpClient,
-		l1ParamsFetcher:     parameters.NewL1ParamsFetcher(httpClient.IotaClient(), log),
+		l1ParamsFetcher:     l1paramsfetcher.NewL1ParamsFetcher(httpClient.GetIotaClient(), log),
 		maxNumberOfRequests: maxNumberOfRequests,
 		chainsMap: shrinkingmap.New[isc.ChainID, *ncChain](
 			shrinkingmap.WithShrinkingThresholdRatio(chainsCleanupThresholdRatio),
@@ -158,16 +159,16 @@ func (nc *nodeConnection) ConsensusL1InfoProposal(
 			panic(err)
 		}
 
-		gasCoinGetObjectRes, err := nc.httpClient.GetObject(ctx, iotaclient.GetObjectRequest{
+		gasCoinGetObjectRes, err := nc.httpClient.GetObject(ctx, iotagraphql.GetObjectRequest{
 			ObjectID: stateMetadata.GasCoinObjectID,
-			Options:  &iotajsonrpc.IotaObjectDataOptions{ShowBcs: true},
+			Options:  &iotagraphql.IotaObjectDataOptions{ShowBcs: true},
 		})
 		if err != nil {
 			panic(err)
 		}
 
 		var gasCoin iscmoveclient.MoveCoin
-		err = iotaclient.UnmarshalBCS(gasCoinGetObjectRes.Data.Bcs.Data.MoveObject.BcsBytes, &gasCoin)
+		err = client.UnmarshalBCS(gasCoinGetObjectRes.Data.Bcs.Data.MoveObject.BcsBytes, &gasCoin)
 		if err != nil {
 			panic(err)
 		}
@@ -231,7 +232,7 @@ func (nc *nodeConnection) L1Client() clients.L1Client {
 	return nc.httpClient
 }
 
-func (nc *nodeConnection) L1ParamsFetcher() parameters.L1ParamsFetcher {
+func (nc *nodeConnection) L1ParamsFetcher() l1paramsfetcher.L1ParamsFetcher {
 	return nc.l1ParamsFetcher
 }
 
