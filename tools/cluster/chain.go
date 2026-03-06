@@ -2,10 +2,14 @@ package cluster
 
 import (
 	"context"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/iotaledger/wasp/v2/clients/apiclient"
 	"github.com/iotaledger/wasp/v2/clients/apiextensions"
 	"github.com/iotaledger/wasp/v2/clients/chainclient"
+	"github.com/iotaledger/wasp/v2/clients/iotagraphql"
 	"github.com/iotaledger/wasp/v2/clients/multiclient"
 	"github.com/iotaledger/wasp/v2/packages/cryptolib"
 	"github.com/iotaledger/wasp/v2/packages/isc"
@@ -72,20 +76,44 @@ func (ch *Chain) Client(keyPair cryptolib.Signer, nodeIndex ...int) *chainclient
 	)
 }
 
-func (ch *Chain) CommitteeMultiClient() *multiclient.MultiClient {
+func (ch *Chain) committeeMultiClient() *multiclient.MultiClient {
 	var resolver multiclient.ClientResolver = func(apiHost string) *apiclient.APIClient {
 		return ch.Cluster.WaspClientFromHostName(apiHost)
 	}
 
-	return multiclient.New(resolver, ch.CommitteeAPIHosts()) //.WithLogFunc(ch.Cluster.t.Logf)
+	return multiclient.New(resolver, ch.CommitteeAPIHosts())
 }
 
-func (ch *Chain) AllNodesMultiClient() *multiclient.MultiClient {
+func (ch *Chain) allNodesMultiClient() *multiclient.MultiClient {
 	var resolver multiclient.ClientResolver = func(apiHost string) *apiclient.APIClient {
 		return ch.Cluster.WaspClientFromHostName(apiHost)
 	}
 
-	return multiclient.New(resolver, ch.AllAPIHosts()) //.WithLogFunc(ch.Cluster.t.Logf)
+	return multiclient.New(resolver, ch.AllAPIHosts())
+}
+
+func (ch *Chain) WaitUntilAllRequestsProcessed(ctx context.Context, tx *iotagraphql.ExecuteTransactionBlockResponse, waitForL1 bool, timeout time.Duration) ([]*apiclient.ReceiptResponse, error) {
+	return ch.committeeMultiClient().WaitUntilAllRequestsProcessed(ctx, ch.ChainID, tx, waitForL1, timeout)
+}
+
+func (ch *Chain) WaitUntilAllRequestsProcessedSuccessfully(ctx context.Context, tx *iotagraphql.ExecuteTransactionBlockResponse, waitForL1 bool, timeout time.Duration) ([]*apiclient.ReceiptResponse, error) {
+	return ch.committeeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(ctx, ch.ChainID, tx, waitForL1, timeout)
+}
+
+func (ch *Chain) WaitUntilAllNodesRequestsProcessedSuccessfully(ctx context.Context, tx *iotagraphql.ExecuteTransactionBlockResponse, waitForL1 bool, timeout time.Duration) ([]*apiclient.ReceiptResponse, error) {
+	return ch.allNodesMultiClient().WaitUntilAllRequestsProcessedSuccessfully(ctx, ch.ChainID, tx, waitForL1, timeout)
+}
+
+func (ch *Chain) WaitUntilRequestProcessed(ctx context.Context, reqID isc.RequestID, waitForL1 bool, timeout time.Duration) (*apiclient.ReceiptResponse, error) {
+	return ch.committeeMultiClient().WaitUntilRequestProcessed(ctx, ch.ChainID, reqID, waitForL1, timeout)
+}
+
+func (ch *Chain) WaitUntilRequestProcessedSuccessfully(ctx context.Context, reqID isc.RequestID, waitForL1 bool, timeout time.Duration) (*apiclient.ReceiptResponse, error) {
+	return ch.committeeMultiClient().WaitUntilRequestProcessedSuccessfully(ctx, ch.ChainID, reqID, waitForL1, timeout)
+}
+
+func (ch *Chain) WaitUntilEVMRequestProcessedSuccessfully(ctx context.Context, txHash common.Hash, waitForL1 bool, timeout time.Duration) (*apiclient.ReceiptResponse, error) {
+	return ch.committeeMultiClient().WaitUntilEVMRequestProcessedSuccessfully(ctx, ch.ChainID, txHash, waitForL1, timeout)
 }
 
 func (ch *Chain) BlockIndex(nodeIndex ...int) (uint32, error) {

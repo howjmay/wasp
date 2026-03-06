@@ -2,8 +2,6 @@ package tests
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestClusterSingleNode(t *testing.T) {
@@ -12,7 +10,7 @@ func TestClusterSingleNode(t *testing.T) {
 	}
 
 	// setup a cluster with a single node
-	env := createTestWrapper(t, 1, []int{0})
+	env := NewChainEnv(t, ClusterOptions{NumNodes: 1, Committee: []int{0}, DeactivateOnCleanup: true})
 
 	// fails in CI
 	t.Run("permissionless access node", env.testPermissionlessAccessNode)
@@ -31,7 +29,7 @@ func TestClusterMultiNodeCommittee(t *testing.T) {
 	}
 
 	// setup a cluster with 4 nodes
-	env := createTestWrapper(t, 4, []int{0, 1, 2, 3})
+	env := NewChainEnv(t, ClusterOptions{NumNodes: 4, Committee: []int{0, 1, 2, 3}, DeactivateOnCleanup: true})
 
 	t.Run("deploy basic", env.testDeployChain)
 
@@ -47,20 +45,3 @@ func TestClusterMultiNodeCommittee(t *testing.T) {
 	t.Run("webapi ISC estimategas offledger", env.testEstimateGasOffLedger)
 }
 
-func createTestWrapper(t *testing.T, clusterSize int, committee []int) *ChainEnv {
-	distKeyGenQuorum := uint16((2*len(committee))/3 + 1)
-	clu := newCluster(t, waspClusterOpts{nNodes: clusterSize})
-	distKeyGenAddr, err := clu.RunDistributedKeyGeneration(committee, distKeyGenQuorum)
-	require.NoError(t, err)
-
-	// create a fresh new chain for the test
-	allNodes := clu.Config.AllNodes()
-	chain, err := clu.DeployChain(allNodes, allNodes, distKeyGenQuorum, distKeyGenAddr, false)
-	require.NoError(t, err)
-	env := newChainEnv(t, clu, chain)
-
-	t.Cleanup(func() {
-		clu.MultiClient().DeactivateChain()
-	})
-	return env
-}

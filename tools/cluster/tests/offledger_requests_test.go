@@ -31,7 +31,7 @@ func (e *ChainEnv) testOffLedgerNonce(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	_, err = e.Chain.CommitteeMultiClient().WaitUntilRequestProcessedSuccessfully(context.Background(), e.Chain.ChainID, offledgerReq.ID(), false, 30*time.Second)
+	_, err = e.Chain.WaitUntilRequestProcessedSuccessfully(context.Background(), offledgerReq.ID(), false, 30*time.Second)
 	require.Error(t, err) // wont' be processed
 
 	// send off-ledger requests with the correct nonce
@@ -44,7 +44,7 @@ func (e *ChainEnv) testOffLedgerNonce(t *testing.T) {
 			},
 		)
 		require.NoError(t, err2)
-		_, err2 = e.Chain.CommitteeMultiClient().WaitUntilRequestProcessedSuccessfully(context.Background(), e.Chain.ChainID, req.ID(), false, 10*time.Second)
+		_, err2 = e.Chain.WaitUntilRequestProcessedSuccessfully(context.Background(), req.ID(), false, 10*time.Second)
 		require.NoError(t, err2)
 	}
 
@@ -75,7 +75,7 @@ func (e *ChainEnv) newWalletWithL2Funds(waspnode int, waitOnNodes ...int) *chain
 	})
 	require.NoError(e.t, err)
 
-	receipts, err := e.Chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, reqTx, false, 30*time.Second)
+	receipts, err := e.Chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), reqTx, false, 30*time.Second)
 	require.NoError(e.t, err)
 
 	gasFeeCharged, err := util.DecodeUint64(receipts[0].GasFeeCharged)

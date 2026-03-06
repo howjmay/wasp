@@ -61,7 +61,7 @@ func TestEVMJsonRPCZeroGasFee(t *testing.T) {
 		GasBudget: iotagraphql.DefaultGasBudget,
 	})
 	require.NoError(t, err)
-	_, err = e.Chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, reqTx, false, 30*time.Second)
+	_, err = e.Chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), reqTx, false, 30*time.Second)
 	require.NoError(t, err)
 
 	d, err := govClient.CallView(context.Background(), governance.ViewGetFeePolicy.Message())

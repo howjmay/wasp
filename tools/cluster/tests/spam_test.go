@@ -91,7 +91,7 @@ func (e *ChainEnv) testSpamOnledger(t *testing.T) {
 				reqSentTime := time.Now()
 				// wait for the request to be processed
 				var receipt []*apiclient.ReceiptResponse
-				receipt, err = e.Chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, req, false, 1*time.Minute)
+				receipt, err = e.Chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), req, false, 1*time.Minute)
 				if err != nil {
 					reqErrorChan <- err
 					return

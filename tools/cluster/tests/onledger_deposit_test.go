@@ -34,7 +34,7 @@ func (e *ChainEnv) testOnLedgerDeposit(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		receipts, err := e.Chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, tx[i], false, 30*time.Second)
+		receipts, err := e.Chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), tx[i], false, 30*time.Second)
 		require.NoError(t, err)
 
 		gasFeeCharged, err := util.DecodeUint64(receipts[0].GasFeeCharged)

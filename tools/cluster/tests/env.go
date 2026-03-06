@@ -24,7 +24,6 @@ import (
 	"github.com/iotaledger/wasp/v2/packages/evm/evmtest"
 	"github.com/iotaledger/wasp/v2/packages/evm/evmutil"
 	"github.com/iotaledger/wasp/v2/packages/isc"
-	"github.com/iotaledger/wasp/v2/packages/solo"
 	"github.com/iotaledger/wasp/v2/packages/vm/core/accounts"
 	"github.com/iotaledger/wasp/v2/packages/vm/core/evm"
 	"github.com/iotaledger/wasp/v2/tools/cluster"
@@ -35,6 +34,32 @@ type ChainEnv struct {
 	Clu             *cluster.Cluster
 	Chain           *cluster.Chain
 	testContractEnv *TestContractEnv
+}
+
+// ClusterOptions describes how to spin up a cluster and chain for a test.
+type ClusterOptions struct {
+	NumNodes            int
+	Committee           []int  // defaults to all nodes if empty
+	Quorum              uint16 // defaults to 2/3+1 if zero
+	ModifyConfig        func(nodeIndex int, configParams cluster.WaspConfigParams) cluster.WaspConfigParams
+	BlockKeepAmount     []int32
+	DeactivateOnCleanup bool // reserved for future use
+}
+
+// NewChainEnv creates a cluster with the given options and deploys a chain.
+func NewChainEnv(t *testing.T, opts ClusterOptions) *ChainEnv {
+	clu := newCluster(t, waspClusterOpts{nNodes: opts.NumNodes, modifyConfig: opts.ModifyConfig})
+	committee := opts.Committee
+	if len(committee) == 0 {
+		committee = clu.Config.AllNodes()
+	}
+	quorum := opts.Quorum
+	if quorum == 0 {
+		quorum = uint16((2*len(committee))/3 + 1)
+	}
+	chain, err := clu.DeployChainWithDistKeyGen(clu.Config.AllNodes(), committee, quorum, opts.BlockKeepAmount...)
+	require.NoError(t, err)
+	return newChainEnv(t, clu, chain)
 }
 
 func SetupWithChain(t *testing.T, opts ...waspClusterOpts) *ChainEnv {
@@ -83,7 +108,7 @@ func (e *ChainEnv) DepositFunds(amount coin.Value, keyPair *cryptolib.KeyPair) {
 	}
 	tx, err := client.PostRequest(context.Background(), accounts.FuncDeposit.Message(), params)
 	require.NoError(e.t, err)
-	_, err = e.Chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, tx, true, 30*time.Second)
+	_, err = e.Chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), tx, true, 30*time.Second)
 	require.NoError(e.t, err, "Error while WaitUntilAllRequestsProcessedSuccessfully")
 }
 
@@ -98,7 +123,7 @@ func (e *ChainEnv) TransferFundsTo(assets *isc.Assets, keyPair *cryptolib.KeyPai
 		L2GasBudget: uint64(l2GasFee),
 	})
 	require.NoError(e.t, err)
-	_, err = e.Chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, tx, false, 30*time.Second)
+	_, err = e.Chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), tx, false, 30*time.Second)
 	require.NoError(e.t, err, "Error while WaitUntilAllRequestsProcessedSuccessfully")
 }
 
@@ -145,7 +170,7 @@ func (e *ChainEnv) DeploySolidityContract(creator *ecdsa.PrivateKey, abiJSON str
 	require.NoError(e.t, err)
 
 	// await tx confirmed
-	_, err = e.Chain.CommitteeMultiClient().WaitUntilEVMRequestProcessedSuccessfully(context.Background(), e.Chain.ChainID, tx.Hash(), false, 30*time.Second)
+	_, err = e.Chain.WaitUntilEVMRequestProcessedSuccessfully(context.Background(), tx.Hash(), false, 30*time.Second)
 	require.NoError(e.t, err)
 
 	return crypto.CreateAddress(creatorAddress, nonce), contractABI
@@ -200,7 +225,7 @@ type TestContractEnv struct {
 func (e *ChainEnv) NewTestContractEnv(t *testing.T) *TestContractEnv {
 	keyPair, _, err := e.Clu.NewKeyPairWithFunds()
 	require.NoError(t, err)
-	evmPvtKey, evmAddr := solo.NewEthereumAccount()
+	evmPvtKey, evmAddr := newEthereumAccount()
 	evmAgentID := isc.NewEthereumAddressAgentID(evmAddr)
 	e.TransferFundsTo(isc.NewAssets(cluster.BaseTokensForL2Gas), keyPair, evmAgentID)
 	contractAddr, contractABI := e.DeploySolidityContract(evmPvtKey, evmtest.StorageContractABI, evmtest.StorageContractBytecode, uint32(42))
@@ -234,7 +259,7 @@ func (e *ChainEnv) CallStore(archiveClient, lightClient *ethclient.Client, input
 	require.NoError(e.t, err)
 	// await tx confirmed
 	for i := 0; i < 3; i++ {
-		_, err = e.Clu.MultiClient().WaitUntilEVMRequestProcessedSuccessfully(context.Background(), e.Chain.ChainID, tx.Hash(), false, 30*time.Second)
+		_, err = e.Chain.WaitUntilEVMRequestProcessedSuccessfully(context.Background(), tx.Hash(), false, 30*time.Second)
 		if err == nil {
 			break
 		}
@@ -259,4 +284,14 @@ func (e *ChainEnv) CallRetrieve(archiveClient *ethclient.Client) uint32 {
 	val, err := e.testContractEnv.EvmTestContractABI.Unpack("retrieve", ret)
 	require.NoError(e.t, err)
 	return val[0].(uint32)
+}
+
+// NewEVMTestEnv returns an EVM test environment connected to the given node index.
+func (e *ChainEnv) NewEVMTestEnv(t *testing.T, nodeIndex int) *clusterTestEnv {
+	return newClusterTestEnv(t, e, nodeIndex)
+}
+
+// testContract returns the test contract environment (EVM contract deployed during setup).
+func (e *ChainEnv) testContract() *TestContractEnv {
+	return e.testContractEnv
 }

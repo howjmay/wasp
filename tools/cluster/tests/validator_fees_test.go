@@ -56,7 +56,7 @@ func TestValidatorFees(t *testing.T) {
 		GasBudget: iotagraphql.DefaultGasBudget,
 	})
 	require.NoError(t, err)
-	_, err = chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), chain.ChainID, reqTx, false, 30*time.Second)
+	_, err = chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), reqTx, false, 30*time.Second)
 	require.NoError(t, err)
 
 	// send a bunch of requests
@@ -70,7 +70,7 @@ func TestValidatorFees(t *testing.T) {
 			GasBudget: iotagraphql.DefaultGasBudget,
 		})
 		require.NoError(t, err)
-		_, err = chain.CommitteeMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), chainID, reqTx, false, 30*time.Second)
+		_, err = chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), reqTx, false, 30*time.Second)
 		require.NoError(t, err)
 	}
 	for _, validatorKp := range validatorKps {

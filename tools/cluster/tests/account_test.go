@@ -51,7 +51,7 @@ func (e *ChainEnv) testOffLedgerDepositWithdrawTransfer(t *testing.T) {
 	require.NoError(t, err)
 	time.Sleep(3 * time.Second)
 
-	reqceipt, err := e.Chain.CommitteeMultiClient().WaitUntilRequestProcessedSuccessfully(context.Background(), e.Chain.ChainID, req.ID(), false, 30*time.Second)
+	reqceipt, err := e.Chain.WaitUntilRequestProcessedSuccessfully(context.Background(), req.ID(), false, 30*time.Second)
 	require.NoError(t, err)
 
 	user1L2Bal2 := e.GetL2Balance(isc.NewAddressAgentID(addressUser1), coin.BaseTokenType)

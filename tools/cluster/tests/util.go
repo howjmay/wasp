@@ -273,7 +273,7 @@ outer:
 			if !ok {
 				break outer
 			}
-			_, err := e.Clu.MultiClient().WaitUntilEVMRequestProcessedSuccessfully(ctx, e.Chain.ChainID, tx.Hash(), false, 90*time.Second)
+			_, err := e.Chain.WaitUntilEVMRequestProcessedSuccessfully(ctx, tx.Hash(), false, 90*time.Second)
 			if err != nil {
 				return err
 			}
@@ -455,7 +455,7 @@ func (e *clusterTestEnv) newEthereumAccountWithL2Funds(baseTokens ...coin.Value)
 	require.NoError(e.T, err)
 
 	// We have to wait not only for the committee to process the request, but also for access nodes to get that info.
-	_, err = e.Chain.AllNodesMultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, tx, false, 30*time.Second)
+	_, err = e.Chain.WaitUntilAllNodesRequestsProcessedSuccessfully(context.Background(), tx, false, 30*time.Second)
 	require.NoError(e.T, err)
 
 	return ethKey, ethAddr

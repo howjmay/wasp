@@ -25,9 +25,10 @@ func TestPruning(t *testing.T) {
 
 	// t.Parallel()
 	blockKeepAmount := 10
-	clu := newCluster(t, waspClusterOpts{
-		nNodes: 4,
-		modifyConfig: func(nodeIndex int, configParams cluster.WaspConfigParams) cluster.WaspConfigParams {
+	env := NewChainEnv(t, ClusterOptions{
+		NumNodes: 4,
+		Quorum:   4,
+		ModifyConfig: func(nodeIndex int, configParams cluster.WaspConfigParams) cluster.WaspConfigParams {
 			// set node 0 as an "archive node"
 			if nodeIndex == 0 {
 				configParams.PruningMinStatesToKeep = -1
@@ -35,15 +36,11 @@ func TestPruning(t *testing.T) {
 				// all other nodes will only keep 10 blocks
 				configParams.PruningMinStatesToKeep = blockKeepAmount
 			}
-
 			return configParams
 		},
+		// set blockKeepAmount (active state pruning) to 10 as well
+		BlockKeepAmount: []int32{int32(blockKeepAmount)},
 	})
-
-	// set blockKeepAmount (active state pruning) to 10 as well
-	chain, err := clu.DeployChainWithDistKeyGen(clu.Config.AllNodes(), clu.Config.AllNodes(), 4, int32(blockKeepAmount))
-	require.NoError(t, err)
-	env := newChainEnv(t, clu, chain)
 
 	const numRequests = 100
 
@@ -53,11 +50,11 @@ func TestPruning(t *testing.T) {
 	archiveClientIndex := 0
 	lightClientIndex := 1
 
-	storageContractAddr, transactions, err := env.sendNRequests(newClusterTestEnv(t, env, archiveClientIndex), numRequests, archiveClientIndex, false)
+	storageContractAddr, transactions, err := env.sendNRequests(env.NewEVMTestEnv(t, archiveClientIndex), numRequests, archiveClientIndex, false)
 	require.NoError(t, err)
 
 	txs := make([]*types.Transaction, 0, numRequests)
-	err = env.verifyNRequests(context.Background(), transactions, numRequests, clu.Config.AllNodes(), storageContractAddr, func(tx *types.Transaction) {
+	err = env.verifyNRequests(context.Background(), transactions, numRequests, env.Clu.Config.AllNodes(), storageContractAddr, func(tx *types.Transaction) {
 		txs = append(txs, tx)
 	})
 	require.NoError(t, err)
@@ -182,14 +179,14 @@ func TestPruning(t *testing.T) {
 
 	t.Run("eth_getBalance", func(t *testing.T) {
 		t.Parallel()
-		bal, err := archiveClient.BalanceAt(context.Background(), env.testContractEnv.EvmTesterAddr, big.NewInt(25))
+		bal, err := archiveClient.BalanceAt(context.Background(), env.testContract().EvmTesterAddr, big.NewInt(25))
 		require.NoError(t, err)
 		require.Positive(t, bal.Cmp(big.NewInt(0)))
 	})
 
 	t.Run("eth_getCode", func(t *testing.T) {
 		t.Parallel()
-		code, err := archiveClient.CodeAt(context.Background(), env.testContractEnv.EvmTesterAddr, big.NewInt(25))
+		code, err := archiveClient.CodeAt(context.Background(), env.testContract().EvmTesterAddr, big.NewInt(25))
 		require.NoError(t, err)
 		require.NotNil(t, code)
 	})
@@ -203,7 +200,7 @@ func TestPruning(t *testing.T) {
 
 	t.Run("eth_getStorageAt", func(t *testing.T) {
 		t.Parallel()
-		val, err := archiveClient.StorageAt(context.Background(), env.testContractEnv.EvmTestContractAddr, common.BigToHash(big.NewInt(0)), big.NewInt(55))
+		val, err := archiveClient.StorageAt(context.Background(), env.testContract().EvmTestContractAddr, common.BigToHash(big.NewInt(0)), big.NewInt(55))
 		require.NoError(t, err)
 		require.NotNil(t, val)
 	})
@@ -212,7 +209,7 @@ func TestPruning(t *testing.T) {
 		t.Parallel()
 		// archive node
 		var bi uint32 = 10
-		res, err := chain.Client(nil, 0).CallView(
+		res, err := env.Chain.Client(nil, 0).CallView(
 			context.Background(),
 			blocklog.ViewGetRequestReceiptsForBlock.Message(&bi),
 			"10",
@@ -226,7 +223,7 @@ func TestPruning(t *testing.T) {
 
 		// light node
 		bi = 0
-		_, err = chain.Client(nil, 1).CallView(
+		_, err = env.Chain.Client(nil, 1).CallView(
 			context.Background(),
 			blocklog.ViewGetRequestReceiptsForBlock.Message(&bi),
 			"10",

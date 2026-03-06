@@ -36,7 +36,7 @@ func TestRotationOverlappingCommitteesWithConcurrentRequests(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, len(contractRegistry) > 0)
 
-	chEnv := newChainEnv(t, clu, chain)
+	chEnv := &ChainEnv{t: t, Clu: clu, Chain: chain}
 
 	waitCommitteeStateAddress(t, clu, rotation1.Address.String(), 6*time.Second, 2)
 
@@ -47,7 +47,7 @@ func TestRotationOverlappingCommitteesWithConcurrentRequests(t *testing.T) {
 	myClient.DepositFunds(100 * isc.Million)
 	time.Sleep(2 * time.Second)
 
-	storageContractAddr, transactions, err := chEnv.sendNRequests(newClusterTestEnv(t, chEnv, 0), int64(numRequests), 0, true)
+	storageContractAddr, transactions, err := chEnv.sendNRequests(chEnv.NewEVMTestEnv(t, 0), int64(numRequests), 0, true)
 	require.NoError(t, err)
 
 	time.Sleep(2 * time.Second)
@@ -77,7 +77,7 @@ func TestRotationOverlappingCommitteesWithConcurrentRequests(t *testing.T) {
 	// Wait until committee state address equals rotation2 address
 	waitCommitteeStateAddress(t, clu, rotation2.Address.String(), 20*time.Second, 3)
 
-	err = chEnv.checkNRequests(newClusterTestEnv(t, chEnv, 0), int64(numRequests), 0, clu.AllNodes(), 0)
+	err = chEnv.checkNRequests(chEnv.NewEVMTestEnv(t, 0), int64(numRequests), 0, clu.AllNodes(), 0)
 	require.NoError(t, err)
 
 	// check that state index in anchor equals to state index in storage

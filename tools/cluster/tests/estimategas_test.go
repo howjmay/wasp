@@ -48,7 +48,7 @@ func (e *ChainEnv) testEstimateGasOnLedger(t *testing.T) {
 		GasBudget: iotagraphql.DefaultGasBudget,
 	})
 	require.NoError(t, err)
-	_, err = e.Clu.MultiClient().WaitUntilAllRequestsProcessedSuccessfully(context.Background(), e.Chain.ChainID, tx, true, 10*time.Second)
+	_, err = e.Chain.WaitUntilAllRequestsProcessedSuccessfully(context.Background(), tx, true, 10*time.Second)
 	require.NoError(t, err)
 
 	// Create tx sender with some funds
@@ -241,7 +241,7 @@ func (e *ChainEnv) testEstimateGasOnLedger(t *testing.T) {
 	require.Equal(t, estimatedStorageFee, gasSummary.StorageCost.Int.Uint64())
 	require.LessOrEqual(t, estimatedStorageRebate, gasSummary.StorageRebate.Int.Uint64())
 
-	recs, err := e.Clu.MultiClient().WaitUntilAllRequestsProcessed(context.Background(), e.Chain.ChainID, res, false, 10*time.Second)
+	recs, err := e.Chain.WaitUntilAllRequestsProcessed(context.Background(), res, false, 10*time.Second)
 	require.NoError(t, err, recs)
 	require.Empty(t, recs[0].ErrorMessage, lo.FromPtr(recs[0].ErrorMessage))
 	require.Equal(t, recs[0].GasBurned, estimatedReceipt.L2.GasBurned)
@@ -261,7 +261,7 @@ func (e *ChainEnv) testEstimateGasOnLedger(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, res.ExecuteTransactionBlock.Errors)
 	require.True(t, res.ExecuteTransactionBlock.Effects.IsSuccess())
-	recs, _ = e.Clu.MultiClient().WaitUntilAllRequestsProcessed(context.Background(), e.Chain.ChainID, res, false, 10*time.Second)
+	recs, _ = e.Chain.WaitUntilAllRequestsProcessed(context.Background(), res, false, 10*time.Second)
 	require.Equal(t, "gas budget exceeded", lo.FromPtr(recs[0].ErrorMessage))
 }
 
@@ -308,7 +308,7 @@ func (e *ChainEnv) testEstimateGasOffLedger(t *testing.T) {
 		par,
 	)
 	require.NoError(t, err)
-	rec, err := e.Clu.MultiClient().WaitUntilRequestProcessedSuccessfully(context.Background(), e.Chain.ChainID, req.ID(), false, 30*time.Second)
+	rec, err := e.Chain.WaitUntilRequestProcessedSuccessfully(context.Background(), req.ID(), false, 30*time.Second)
 	require.NoError(t, err)
 	require.Equal(t, rec.GasBurned, estimatedReceipt.GasBurned)
 	require.Equal(t, rec.GasFeeCharged, estimatedReceipt.GasFeeCharged)

@@ -11,7 +11,6 @@ import (
 
 	"github.com/iotaledger/wasp/v2/clients/iotagraphql"
 	"github.com/iotaledger/wasp/v2/packages/isc"
-	"github.com/iotaledger/wasp/v2/packages/solo"
 )
 
 func (e *ChainEnv) testDumpAccounts(t *testing.T) {
@@ -27,7 +26,7 @@ func (e *ChainEnv) testDumpAccounts(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// 5 EVM accounts
-		_, evmAddr := solo.NewEthereumAccount()
+		_, evmAddr := newEthereumAccount()
 		keyPair, _, err := e.Clu.NewKeyPairWithFunds()
 		require.NoError(t, err)
 		evmAgentID := isc.NewEthereumAddressAgentID(evmAddr)
